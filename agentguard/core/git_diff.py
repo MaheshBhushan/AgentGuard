@@ -10,7 +10,15 @@ _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
 
 def _git(root: Path, *args: str) -> str:
-    result = subprocess.run(["git", *args], cwd=root, text=True, capture_output=True, check=False)
+    result = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+    )
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or "git command failed")
     return result.stdout

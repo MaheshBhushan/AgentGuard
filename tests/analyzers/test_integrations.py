@@ -8,7 +8,8 @@ import pytest
 
 from agentguard.analyzers._shared import completed, invoke
 from agentguard.analyzers.base import AnalysisContext, AnalyzerMetadata, AnalyzerRegistry
-from agentguard.analyzers.python.tools import RuffAnalyzer
+from agentguard.analyzers.python.tests import PytestCoverageAnalyzer
+from agentguard.analyzers.python.tools import MypyAnalyzer, RuffAnalyzer
 from agentguard.analyzers.typescript import detect_test_runner, package_manager
 from agentguard.core.config import AgentGuardConfig
 from agentguard.core.models import AnalyzerStatus, ChangedFile, ChangeSummary
@@ -61,6 +62,37 @@ def test_ruff_malformed_json_is_analyzer_failure(tmp_path: Path, monkeypatch) ->
     assert result.status == AnalyzerStatus.FAILED
     assert result.findings == []
     assert (result.message or "").startswith("invalid JSON output:")
+
+
+def test_mypy_supports_changed_files_from_multiple_package_roots(
+    tmp_path: Path, monkeypatch
+) -> None:
+    command: list[str] = []
+
+    async def fake_invoke(_name, args, _context):
+        command.extend(args)
+        return ProcessResult(tuple(args), 0, "", "", 0.1)
+
+    monkeypatch.setattr("agentguard.analyzers.python.tools.invoke", fake_invoke)
+    result = asyncio.run(MypyAnalyzer().analyze(context(tmp_path)))
+    assert result.status == AnalyzerStatus.COMPLETED
+    assert "--explicit-package-bases" in command
+
+
+def test_pytest_missing_report_plugins_is_unavailable(tmp_path: Path, monkeypatch) -> None:
+    async def fake_invoke(*_args, **_kwargs):
+        return ProcessResult(
+            ("pytest",),
+            4,
+            "",
+            "pytest: error: unrecognized arguments: --json-report --cov",
+            0.1,
+        )
+
+    monkeypatch.setattr("agentguard.analyzers.python.tests.invoke", fake_invoke)
+    result = asyncio.run(PytestCoverageAnalyzer().analyze(context(tmp_path)))
+    assert result.status == AnalyzerStatus.UNAVAILABLE
+    assert "pytest-json-report" in (result.message or "")
 
 
 def test_invalid_nonzero_exit_discards_parsed_findings() -> None:

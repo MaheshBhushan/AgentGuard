@@ -30,7 +30,7 @@ Issues = "https://github.com/MaheshBhushan/AgentGuard/issues"
 Source = "https://github.com/MaheshBhushan/AgentGuard"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "mypy>=1.10", "ruff>=0.5", "types-PyYAML>=6.0"]
+dev = ["pytest>=8", "pytest-cov>=5", "pytest-json-report>=1.5", "mypy>=1.10", "ruff>=0.5", "types-PyYAML>=6.0"]
 
 [project.scripts]
 agentguard = "agentguard.cli.app:app"

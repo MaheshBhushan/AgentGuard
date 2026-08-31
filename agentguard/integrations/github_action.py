@@ -24,7 +24,15 @@ COMMENT_MARKER = "<!-- agentguard-report -->"
 
 
 def _git(root: Path, *args: str) -> str:
-    result = subprocess.run(["git", *args], cwd=root, text=True, capture_output=True, check=False)
+    result = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+    )
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or f"git {' '.join(args)} failed")
     return result.stdout.strip()

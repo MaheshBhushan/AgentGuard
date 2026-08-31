@@ -80,6 +80,21 @@ def test_initial_repository_includes_untracked_files(tmp_path: Path) -> None:
     assert change.files[0].changed_lines == {1, 2}
 
 
+def test_change_decodes_non_ascii_diff_as_utf8(tmp_path: Path) -> None:
+    repository(tmp_path)
+    path = tmp_path / "message.py"
+    path.write_text('message = "plain"\n', encoding="utf-8")
+    commit_all(tmp_path, "base")
+    path.write_text('message = "Grüße aus Köln — 你好"\n', encoding="utf-8")
+
+    change = get_change(tmp_path)
+
+    assert change.files[0].path == Path("message.py")
+    assert change.files[0].additions == 1
+    assert change.files[0].deletions == 1
+    assert change.files[0].changed_lines == {1}
+
+
 def test_shallow_clone_reports_missing_base(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()
