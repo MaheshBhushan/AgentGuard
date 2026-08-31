@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: owner/agentguard@v1
+      - uses: MaheshBhushan/AgentGuard@v1
 ```
 
 The default `auto` profile detects Python and TypeScript projects, installs its pinned analyzers, and compares a pull request with the base SHA from the GitHub event. Full history is required to compute a trustworthy merge base; AgentGuard exits with checkout guidance when the history is insufficient rather than analyzing the wrong diff.
