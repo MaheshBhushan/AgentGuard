@@ -1,0 +1,32 @@
+version: 1
+quality:
+  minimum_score: 80
+complexity:
+  max_function_complexity: 15
+  max_complexity_increase: 10
+tests:
+  require_pass: true
+  max_coverage_drop: 1.0
+security:
+  fail_on:
+    - critical
+    - high
+dependencies:
+  max_new_dependencies: 3
+  forbidden:
+    - lodash
+duplication:
+  max_new_blocks: 2
+architecture:
+  max_file_lines: 500
+  max_function_lines: 80
+  forbidden_imports:
+    - from: domain
+      to: infrastructure
+agent:
+  provider: codex
+  max_iterations: 5
+exclude:
+  - node_modules/**
+  - .venv/**
+  - dist/**
