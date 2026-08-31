@@ -55,12 +55,12 @@ def test_action_metadata_exposes_marketplace_contract() -> None:
     upload = next(
         step for step in metadata["runs"]["steps"] if step.get("name") == "Upload AgentGuard report"
     )
-    assert upload["uses"] == "actions/upload-artifact@v4"
+    assert upload["uses"] == "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
     assert "inputs.upload-report == 'true'" in upload["if"]
     sarif = next(
         step for step in metadata["runs"]["steps"] if step.get("name") == "Upload AgentGuard SARIF"
     )
-    assert sarif["uses"] == "github/codeql-action/upload-sarif@v3"
+    assert sarif["uses"] == "github/codeql-action/upload-sarif@6f5948dfacef28e207b48d0905cf90c03365536d"
     assert "inputs.annotations == 'true'" in sarif["if"]
     assert sarif["with"]["sarif_file"].endswith("/.agentguard/report.sarif")
 
