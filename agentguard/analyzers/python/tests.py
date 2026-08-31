@@ -30,6 +30,17 @@ class PytestCoverageAnalyzer:
             )
             if isinstance(process, AnalyzerResult):
                 return process
+            if (
+                process.returncode == 4
+                and "unrecognized arguments" in process.stderr
+                and any(option in process.stderr for option in ("--json-report", "--cov"))
+            ):
+                return AnalyzerResult(
+                    analyzer="pytest",
+                    status=AnalyzerStatus.UNAVAILABLE,
+                    duration_seconds=process.duration_seconds,
+                    message="pytest reporting plugins are unavailable; install pytest-cov pytest-json-report",
+                )
             findings = []
             metrics: dict[str, float] = {}
             try:

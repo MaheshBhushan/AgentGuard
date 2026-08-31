@@ -7,3 +7,4 @@ All notable changes will be documented here. The format follows [Keep a Changelo
 ### Added
 
 - Initial local-first quality-gate architecture, documentation, configuration examples, and CI scaffolding.
+- Trusted-publishing release automation with verified artifacts, clean-environment smoke tests, and build provenance.

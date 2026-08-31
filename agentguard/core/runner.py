@@ -35,4 +35,8 @@ async def run_process(
         process.kill()
         stdout, stderr = await process.communicate()
         return ProcessResult(tuple(command), -1, stdout.decode(errors="replace"), stderr.decode(errors="replace"), time.monotonic() - started, True)
+    except asyncio.CancelledError:
+        process.kill()
+        await process.communicate()
+        raise
     return ProcessResult(tuple(command), process.returncode or 0, stdout.decode(errors="replace"), stderr.decode(errors="replace"), time.monotonic() - started)

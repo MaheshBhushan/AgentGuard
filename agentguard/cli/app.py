@@ -55,8 +55,8 @@ def check(
         raise typer.BadParameter("format must be terminal or json")
     report = _report(diff, staged)
     _emit(report, output)
-    if not report.passed:
-        raise typer.Exit(1)
+    if report.exit_code:
+        raise typer.Exit(report.exit_code)
 
 
 @app.command()
@@ -64,8 +64,8 @@ def compare(base: str, output: str = typer.Option("terminal", "--format")) -> No
     """Compare the current tree with BASE."""
     report = _report(base, False)
     _emit(report, output)
-    if not report.passed:
-        raise typer.Exit(1)
+    if report.exit_code:
+        raise typer.Exit(report.exit_code)
 
 
 @app.command()

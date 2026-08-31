@@ -57,6 +57,7 @@ class MypyAnalyzer:
                 "--show-column-numbers",
                 "--show-error-codes",
                 "--no-error-summary",
+                "--explicit-package-bases",
                 *targets(context, PYTHON),
             ],
             context,
