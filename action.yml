@@ -1,20 +1,113 @@
 name: AgentGuard quality gate
-description: Run deterministic quality checks against a Git base revision
+description: Deterministic quality gates for AI-generated code changes
+author: Mahesh Bhushan
+branding:
+  icon: shield
+  color: blue
 inputs:
   base-ref:
-    description: Git revision to compare against
+    description: Git revision to compare against; auto uses the pull-request base
     required: false
-    default: HEAD~1
+    default: auto
+  config:
+    description: Path to an AgentGuard YAML or TOML configuration file
+    required: false
+    default: ""
+  profile:
+    description: Analyzer profile (auto, minimal, python, typescript, security, or full)
+    required: false
+    default: auto
+  minimum-score:
+    description: Optional minimum quality score override
+    required: false
+    default: ""
+  fail-on:
+    description: Comma-separated outcomes that fail the step
+    required: false
+    default: fail,incomplete,error
+  timeout:
+    description: Per-tool timeout in seconds
+    required: false
+    default: "300"
+  install-analyzers:
+    description: Install pinned tools required by the selected profile
+    required: false
+    default: "true"
+  post-comment:
+    description: Create or update one AgentGuard pull-request comment
+    required: false
+    default: "false"
+  annotations:
+    description: Upload file-specific findings to GitHub code scanning through SARIF
+    required: false
+    default: "false"
+  upload-report:
+    description: Upload the JSON report as a workflow artifact
+    required: false
+    default: "false"
+  token:
+    description: GitHub token reserved for optional PR reporting
+    required: false
+    default: ${{ github.token }}
+outputs:
+  verdict:
+    description: pass, fail, incomplete, error, or skipped
+    value: ${{ steps.agentguard.outputs.verdict }}
+  quality-score:
+    description: Quality score from 0 to 100
+    value: ${{ steps.agentguard.outputs.quality-score }}
+  findings-count:
+    description: Number of normalized findings
+    value: ${{ steps.agentguard.outputs.findings-count }}
+  policy-failures:
+    description: JSON array of failed policy names
+    value: ${{ steps.agentguard.outputs.policy-failures }}
+  analyzers-executed:
+    description: JSON array of completed analyzer names
+    value: ${{ steps.agentguard.outputs.analyzers-executed }}
+  analyzers-unavailable:
+    description: JSON array of unavailable analyzer names
+    value: ${{ steps.agentguard.outputs.analyzers-unavailable }}
+  report-path:
+    description: Absolute path to the JSON report
+    value: ${{ steps.agentguard.outputs.report-path }}
 runs:
   using: composite
   steps:
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
       with:
         python-version: "3.12"
-    - name: Install AgentGuard from action source
+    - name: Install AgentGuard
       shell: bash
-      run: python -m pip install "${{ github.action_path }}"
+      env:
+        AGENTGUARD_ACTION_PATH: ${{ github.action_path }}
+      run: python -m pip install "$AGENTGUARD_ACTION_PATH"
     - name: Run AgentGuard
+      id: agentguard
       shell: bash
-      run: agentguard compare "${{ inputs.base-ref }}" --format json
+      env:
+        AGENTGUARD_INPUT_BASE_REF: ${{ inputs.base-ref }}
+        AGENTGUARD_INPUT_CONFIG: ${{ inputs.config }}
+        AGENTGUARD_INPUT_PROFILE: ${{ inputs.profile }}
+        AGENTGUARD_INPUT_MINIMUM_SCORE: ${{ inputs.minimum-score }}
+        AGENTGUARD_INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        AGENTGUARD_INPUT_TIMEOUT: ${{ inputs.timeout }}
+        AGENTGUARD_INPUT_INSTALL_ANALYZERS: ${{ inputs.install-analyzers }}
+        AGENTGUARD_INPUT_POST_COMMENT: ${{ inputs.post-comment }}
+        AGENTGUARD_INPUT_TOKEN: ${{ inputs.token }}
+      run: python -m agentguard.integrations.github_action
+    - name: Upload AgentGuard SARIF
+      if: ${{ always() && inputs.annotations == 'true' }}
+      uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+      with:
+        sarif_file: ${{ github.workspace }}/.agentguard/report.sarif
+        category: agentguard
+    - name: Upload AgentGuard report
+      if: ${{ always() && inputs.upload-report == 'true' }}
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      with:
+        name: agentguard-report
+        path: ${{ steps.agentguard.outputs.report-path }}
+        if-no-files-found: error
+        retention-days: 7

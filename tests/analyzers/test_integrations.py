@@ -4,13 +4,18 @@ import asyncio
 import json
 from pathlib import Path
 
-from agentguard.analyzers._shared import invoke
-from agentguard.analyzers.base import AnalysisContext
-from agentguard.analyzers.python.tools import RuffAnalyzer
+import pytest
+
+from agentguard.analyzers._shared import completed, invoke
+from agentguard.analyzers.base import AnalysisContext, AnalyzerMetadata, AnalyzerRegistry
+from agentguard.analyzers.python.tests import PytestCoverageAnalyzer
+from agentguard.analyzers.python.tools import MypyAnalyzer, RuffAnalyzer
 from agentguard.analyzers.typescript import detect_test_runner, package_manager
 from agentguard.core.config import AgentGuardConfig
 from agentguard.core.models import AnalyzerStatus, ChangedFile, ChangeSummary
 from agentguard.core.runner import ProcessResult
+
+FIXTURES = Path(__file__).parents[1] / "fixtures" / "package-managers"
 
 
 def context(root: Path) -> AnalysisContext:
@@ -48,6 +53,72 @@ def test_ruff_json_is_normalized(tmp_path: Path, monkeypatch) -> None:
     assert result.findings[0].line == 2
 
 
+def test_ruff_malformed_json_is_analyzer_failure(tmp_path: Path, monkeypatch) -> None:
+    async def fake_invoke(*_args, **_kwargs):
+        return ProcessResult(("ruff",), 1, "not-json", "", 0.1)
+
+    monkeypatch.setattr("agentguard.analyzers.python.tools.invoke", fake_invoke)
+    result = asyncio.run(RuffAnalyzer().analyze(context(tmp_path)))
+    assert result.status == AnalyzerStatus.FAILED
+    assert result.findings == []
+    assert (result.message or "").startswith("invalid JSON output:")
+
+
+def test_mypy_supports_changed_files_from_multiple_package_roots(
+    tmp_path: Path, monkeypatch
+) -> None:
+    command: list[str] = []
+
+    async def fake_invoke(_name, args, _context):
+        command.extend(args)
+        return ProcessResult(tuple(args), 0, "", "", 0.1)
+
+    monkeypatch.setattr("agentguard.analyzers.python.tools.invoke", fake_invoke)
+    result = asyncio.run(MypyAnalyzer().analyze(context(tmp_path)))
+    assert result.status == AnalyzerStatus.COMPLETED
+    assert "--explicit-package-bases" in command
+
+
+def test_pytest_missing_report_plugins_is_unavailable(tmp_path: Path, monkeypatch) -> None:
+    async def fake_invoke(*_args, **_kwargs):
+        return ProcessResult(
+            ("pytest",),
+            4,
+            "",
+            "pytest: error: unrecognized arguments: --json-report --cov",
+            0.1,
+        )
+
+    monkeypatch.setattr("agentguard.analyzers.python.tests.invoke", fake_invoke)
+    result = asyncio.run(PytestCoverageAnalyzer().analyze(context(tmp_path)))
+    assert result.status == AnalyzerStatus.UNAVAILABLE
+    assert "pytest-json-report" in (result.message or "")
+
+
+def test_invalid_nonzero_exit_discards_parsed_findings() -> None:
+    process = ProcessResult(("tool",), 2, "", "configuration failed", 0.1)
+    result = completed("tool", process, [], {"issues": 1.0}, valid_codes={0, 1})
+    assert result.status == AnalyzerStatus.FAILED
+    assert result.findings == []
+    assert result.metrics == {}
+    assert result.message == "configuration failed"
+
+
+def test_analyzer_crash_is_normalized(tmp_path: Path) -> None:
+    class CrashingAnalyzer:
+        metadata = AnalyzerMetadata("crash", "lint", frozenset())
+
+        async def analyze(self, _context: AnalysisContext):
+            raise ValueError("bad output")
+
+    registry = AnalyzerRegistry()
+    registry.register(CrashingAnalyzer())
+    results = asyncio.run(registry.run(context(tmp_path), {"python"}))
+    assert results[0].status == AnalyzerStatus.FAILED
+    assert results[0].findings == []
+    assert results[0].message == "analyzer crashed: ValueError: bad output"
+
+
 def test_package_manager_prefers_declared_value(tmp_path: Path) -> None:
     (tmp_path / "package.json").write_text('{"packageManager":"pnpm@10.0.0"}', encoding="utf-8")
     (tmp_path / "package-lock.json").write_text("{}", encoding="utf-8")
@@ -58,6 +129,19 @@ def test_package_manager_detects_lockfile(tmp_path: Path) -> None:
     (tmp_path / "package.json").write_text("{}", encoding="utf-8")
     (tmp_path / "bun.lock").touch()
     assert package_manager(tmp_path) == "bun"
+
+
+@pytest.mark.parametrize(
+    "manager",
+    [
+        "npm",
+        "pnpm",
+        "yarn",
+        "bun",
+    ],
+)
+def test_package_manager_release_matrix(manager: str) -> None:
+    assert package_manager(FIXTURES / manager) == manager
 
 
 def test_javascript_test_runner_detection() -> None:

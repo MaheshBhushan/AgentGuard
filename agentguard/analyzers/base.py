@@ -33,8 +33,15 @@ class Analyzer(Protocol):
 
 
 class AnalyzerRegistry:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        required: frozenset[str] = frozenset(),
+        versions: dict[str, str] | None = None,
+    ) -> None:
         self._analyzers: dict[str, Analyzer] = {}
+        self._required = required
+        self._versions = versions or {}
 
     def register(self, analyzer: Analyzer) -> None:
         if analyzer.metadata.name in self._analyzers:
@@ -55,6 +62,7 @@ class AnalyzerRegistry:
                     AnalyzerResult(
                         analyzer=metadata.name,
                         status=AnalyzerStatus.SKIPPED,
+                        required=metadata.name in self._required,
                         message="irrelevant to changed languages",
                     )
                 )
@@ -63,9 +71,32 @@ class AnalyzerRegistry:
                     AnalyzerResult(
                         analyzer=metadata.name,
                         status=AnalyzerStatus.UNAVAILABLE,
+                        required=metadata.name in self._required,
                         message=f"Install '{metadata.executable}' to enable this analyzer",
                     )
                 )
             else:
-                tasks.append(asyncio.create_task(analyzer.analyze(context)))
+                tasks.append(asyncio.create_task(self._run_analyzer(analyzer, context)))
         return results + list(await asyncio.gather(*tasks))
+
+    async def _run_analyzer(
+        self, analyzer: Analyzer, context: AnalysisContext
+    ) -> AnalyzerResult:
+        try:
+            result = await analyzer.analyze(context)
+            return result.model_copy(
+                update={
+                    "required": analyzer.metadata.name in self._required,
+                    "version": result.version or self._versions.get(analyzer.metadata.name),
+                }
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - isolate third-party analyzer failures
+            return AnalyzerResult(
+                analyzer=analyzer.metadata.name,
+                status=AnalyzerStatus.FAILED,
+                required=analyzer.metadata.name in self._required,
+                version=self._versions.get(analyzer.metadata.name),
+                message=f"analyzer crashed: {type(exc).__name__}: {exc}",
+            )

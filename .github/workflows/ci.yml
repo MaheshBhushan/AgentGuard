@@ -16,10 +16,10 @@ jobs:
         python-version: ["3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -31,17 +31,19 @@ jobs:
   dogfood:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install -e ".[dev]"
-      - name: Run AgentGuard on its own change
+      - name: Dogfood AgentGuard on its own pull request
+        uses: ./
         if: github.event_name == 'pull_request'
-        run: agentguard compare "${{ github.event.pull_request.base.sha }}" --format terminal
-      - name: Run AgentGuard on pushed commit
+        with:
+          profile: minimal
+          fail-on: error,incomplete
+      - name: Dogfood AgentGuard on pushed commit
+        uses: ./
         if: github.event_name == 'push'
-        run: agentguard check --diff HEAD~1 --format terminal
+        with:
+          base-ref: HEAD~1
+          profile: minimal
+          fail-on: error,incomplete

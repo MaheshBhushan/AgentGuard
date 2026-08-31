@@ -115,7 +115,11 @@ class DependencyAnalyzer:
             if before_content is None and item.status != "added":
                 missing_baselines.append(item.path.as_posix())
                 continue
-            before_runtime, before_dev = parse_manifest(item.path, before_content or b"")
+            before_runtime, before_dev = (
+                parse_manifest(item.path, before_content)
+                if before_content is not None
+                else (set(), set())
+            )
             after_runtime, after_dev = parse_manifest(item.path, current_content)
             added.update(after_runtime - before_runtime)
             removed.update(before_runtime - after_runtime)

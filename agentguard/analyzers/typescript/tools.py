@@ -87,7 +87,7 @@ class ESLintAnalyzer:
                 duration_seconds=process.duration_seconds,
                 message=f"invalid JSON output: {exc}",
             )
-        return completed("eslint", process, findings, valid_codes={0, 1, 2})
+        return completed("eslint", process, findings, valid_codes={0, 1})
 
 
 class OxcAnalyzer:

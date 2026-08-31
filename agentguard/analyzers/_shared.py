@@ -45,7 +45,7 @@ def targets(context: AnalysisContext, suffixes: set[str]) -> list[str]:
     return [
         str(item.path)
         for item in context.change.files
-        if item.status != "D" and item.path.suffix.lower() in suffixes
+        if item.status not in {"D", "deleted"} and item.path.suffix.lower() in suffixes
     ]
 
 
@@ -121,8 +121,8 @@ def completed(
     return AnalyzerResult(
         analyzer=name,
         status=status,
-        findings=findings,
-        metrics=metrics or {},
+        findings=findings if status == AnalyzerStatus.COMPLETED else [],
+        metrics=(metrics or {}) if status == AnalyzerStatus.COMPLETED else {},
         duration_seconds=process.duration_seconds,
         message=None
         if status == AnalyzerStatus.COMPLETED

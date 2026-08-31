@@ -1,0 +1,21 @@
+name: Consumer Action smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consumer-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Run local AgentGuard candidate
+        uses: ./
+        with:
+          base-ref: HEAD~1
+          profile: minimal
+          install-analyzers: "false"
