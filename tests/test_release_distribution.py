@@ -31,6 +31,8 @@ def test_release_workflow_uses_trusted_publishing_and_minimal_permissions() -> N
         for step in publish["steps"]
     )
     assert workflow["jobs"]["github-release"]["needs"] == "build"
+    release_command = workflow["jobs"]["github-release"]["steps"][1]["run"]
+    assert '--repo "$GITHUB_REPOSITORY"' in release_command
     test_publish = yaml.safe_load(
         (ROOT / ".github" / "workflows" / "test-publish.yml").read_text(encoding="utf-8")
     )["jobs"]["test-publish"]
