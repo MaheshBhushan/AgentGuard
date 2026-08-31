@@ -24,7 +24,7 @@ def _status(value: object) -> str:
 def render_github_markdown(report: object, *, max_findings: int = 20) -> str:
     """Render a normalized report as bounded, PR-safe Markdown."""
     score = _get(report, "quality_score", _get(report, "score", 0))
-    verdict = _get(report, "verdict")
+    verdict = _get(report, "verdict", _get(report, "outcome"))
     if verdict is None:
         verdict = "PASS" if _get(report, "passed", False) else "CHANGES REQUESTED"
     policies: Sequence[object] = _get(report, "policies", ())

@@ -4,8 +4,8 @@ import asyncio
 import json
 from pathlib import Path
 
-from agentguard.analyzers._shared import invoke
-from agentguard.analyzers.base import AnalysisContext
+from agentguard.analyzers._shared import completed, invoke
+from agentguard.analyzers.base import AnalysisContext, AnalyzerMetadata, AnalyzerRegistry
 from agentguard.analyzers.python.tools import RuffAnalyzer
 from agentguard.analyzers.typescript import detect_test_runner, package_manager
 from agentguard.core.config import AgentGuardConfig
@@ -46,6 +46,41 @@ def test_ruff_json_is_normalized(tmp_path: Path, monkeypatch) -> None:
     assert result.status == AnalyzerStatus.COMPLETED
     assert result.findings[0].rule_id == "F401"
     assert result.findings[0].line == 2
+
+
+def test_ruff_malformed_json_is_analyzer_failure(tmp_path: Path, monkeypatch) -> None:
+    async def fake_invoke(*_args, **_kwargs):
+        return ProcessResult(("ruff",), 1, "not-json", "", 0.1)
+
+    monkeypatch.setattr("agentguard.analyzers.python.tools.invoke", fake_invoke)
+    result = asyncio.run(RuffAnalyzer().analyze(context(tmp_path)))
+    assert result.status == AnalyzerStatus.FAILED
+    assert result.findings == []
+    assert (result.message or "").startswith("invalid JSON output:")
+
+
+def test_invalid_nonzero_exit_discards_parsed_findings() -> None:
+    process = ProcessResult(("tool",), 2, "", "configuration failed", 0.1)
+    result = completed("tool", process, [], {"issues": 1.0}, valid_codes={0, 1})
+    assert result.status == AnalyzerStatus.FAILED
+    assert result.findings == []
+    assert result.metrics == {}
+    assert result.message == "configuration failed"
+
+
+def test_analyzer_crash_is_normalized(tmp_path: Path) -> None:
+    class CrashingAnalyzer:
+        metadata = AnalyzerMetadata("crash", "lint", frozenset())
+
+        async def analyze(self, _context: AnalysisContext):
+            raise ValueError("bad output")
+
+    registry = AnalyzerRegistry()
+    registry.register(CrashingAnalyzer())
+    results = asyncio.run(registry.run(context(tmp_path), {"python"}))
+    assert results[0].status == AnalyzerStatus.FAILED
+    assert results[0].findings == []
+    assert results[0].message == "analyzer crashed: ValueError: bad output"
 
 
 def test_package_manager_prefers_declared_value(tmp_path: Path) -> None:

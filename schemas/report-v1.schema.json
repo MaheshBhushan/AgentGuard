@@ -1,0 +1,541 @@
+{
+  "$defs": {
+    "AnalyzerResult": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzer": {
+          "title": "Analyzer",
+          "type": "string"
+        },
+        "duration_seconds": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Duration Seconds",
+          "type": "number"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/AnalyzerStatus",
+          "default": "completed"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "analyzer"
+      ],
+      "title": "AnalyzerResult",
+      "type": "object"
+    },
+    "AnalyzerStatus": {
+      "enum": [
+        "completed",
+        "skipped",
+        "unavailable",
+        "failed"
+      ],
+      "title": "AnalyzerStatus",
+      "type": "string"
+    },
+    "ChangeSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/ChangedFile"
+          },
+          "title": "Files",
+          "type": "array"
+        },
+        "head": {
+          "default": "working-tree",
+          "title": "Head",
+          "type": "string"
+        }
+      },
+      "title": "ChangeSummary",
+      "type": "object"
+    },
+    "ChangedFile": {
+      "additionalProperties": false,
+      "properties": {
+        "additions": {
+          "default": 0,
+          "title": "Additions",
+          "type": "integer"
+        },
+        "changed_lines": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Changed Lines",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "deletions": {
+          "default": 0,
+          "title": "Deletions",
+          "type": "integer"
+        },
+        "old_path": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Old Path"
+        },
+        "path": {
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "status"
+      ],
+      "title": "ChangedFile",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzer": {
+          "title": "Analyzer",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "column": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column"
+        },
+        "file": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "remediation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remediation"
+        },
+        "rule_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Id"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        }
+      },
+      "required": [
+        "analyzer",
+        "category",
+        "severity",
+        "message"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "Metric": {
+      "additionalProperties": false,
+      "properties": {
+        "before": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "title": "Metric",
+      "type": "object"
+    },
+    "Outcome": {
+      "enum": [
+        "pass",
+        "fail",
+        "incomplete",
+        "error",
+        "skipped"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "PolicyResult": {
+      "additionalProperties": false,
+      "properties": {
+        "actual": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actual"
+        },
+        "expected": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "passed",
+        "message"
+      ],
+      "title": "PolicyResult",
+      "type": "object"
+    },
+    "ScoreComponent": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "penalty": {
+          "minimum": 0,
+          "title": "Penalty",
+          "type": "number"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "penalty",
+        "reason"
+      ],
+      "title": "ScoreComponent",
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        "info",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "SkippedAnalyzer": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzer": {
+          "title": "Analyzer",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "status": {
+          "$ref": "#/$defs/AnalyzerStatus"
+        }
+      },
+      "required": [
+        "analyzer",
+        "status"
+      ],
+      "title": "SkippedAnalyzer",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "analyzer_results": {
+      "items": {
+        "$ref": "#/$defs/AnalyzerResult"
+      },
+      "title": "Analyzer Results",
+      "type": "array"
+    },
+    "analyzers_executed": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Analyzers Executed",
+      "type": "array"
+    },
+    "analyzers_skipped": {
+      "items": {
+        "$ref": "#/$defs/SkippedAnalyzer"
+      },
+      "title": "Analyzers Skipped",
+      "type": "array"
+    },
+    "change": {
+      "$ref": "#/$defs/ChangeSummary"
+    },
+    "duration_seconds": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Duration Seconds",
+      "type": "number"
+    },
+    "exit_code": {
+      "maximum": 3,
+      "minimum": 0,
+      "title": "Exit Code",
+      "type": "integer"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "metrics": {
+      "items": {
+        "$ref": "#/$defs/Metric"
+      },
+      "title": "Metrics",
+      "type": "array"
+    },
+    "policies": {
+      "items": {
+        "$ref": "#/$defs/PolicyResult"
+      },
+      "title": "Policies",
+      "type": "array"
+    },
+    "quality_score": {
+      "default": 100,
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Quality Score",
+      "type": "number"
+    },
+    "repository": {
+      "format": "path",
+      "title": "Repository",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "score_components": {
+      "items": {
+        "$ref": "#/$defs/ScoreComponent"
+      },
+      "title": "Score Components",
+      "type": "array"
+    },
+    "verdict": {
+      "$ref": "#/$defs/Outcome"
+    }
+  },
+  "required": [
+    "repository",
+    "change",
+    "generated_at",
+    "verdict",
+    "exit_code"
+  ],
+  "title": "QualityReportDocument",
+  "type": "object"
+}

@@ -20,7 +20,14 @@ def render_terminal(report: QualityReport, *, color: bool = True) -> str:
     table.add_row("Lines", f"+{report.change.additions} / -{report.change.deletions}")
     for metric in report.metrics:
         table.add_row(metric.name.replace("_", " ").title(), f"{metric.value:g}{' ' + metric.unit if metric.unit else ''}")
-    table.add_row("Verdict", "[green]SAFE TO MERGE[/green]" if report.passed else "[red]CHANGES REQUIRED[/red]")
+    verdicts = {
+        "pass": "[green]SAFE TO MERGE[/green]",
+        "fail": "[red]CHANGES REQUIRED[/red]",
+        "incomplete": "[yellow]ANALYSIS INCOMPLETE[/yellow]",
+        "error": "[red]ANALYSIS ERROR[/red]",
+        "skipped": "[yellow]NO RELEVANT CHANGES[/yellow]",
+    }
+    table.add_row("Verdict", verdicts[report.outcome.value])
     console.print(table)
     findings = actionable_findings(report)
     if findings:

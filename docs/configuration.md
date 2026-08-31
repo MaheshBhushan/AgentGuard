@@ -49,3 +49,16 @@ exclude:
 Commands should be represented as argument arrays when supported, which preserves cross-platform behavior and avoids shell interpretation. Repository configuration is untrusted input: it must not enable unbounded execution or interpolate shell syntax.
 
 Policy limits are independent. `minimum_score` gates the aggregate score; tests, security severities, coverage drop, dependency growth, duplication, and architecture limits can each fail separately. Omitted optional sections use documented defaults rather than silently disabling required safety behavior.
+
+## Compatibility and precedence
+
+Configuration version `1` is a compatibility contract. Unknown keys and unsupported versions fail validation with the exact configuration path instead of being ignored. The checked-in [JSON Schema](../schemas/config-v1.schema.json) can be used by editors and validation tools.
+
+Values are resolved in this order, from highest to lowest priority:
+
+1. CLI options
+2. GitHub Action inputs
+3. Repository configuration
+4. AgentGuard defaults
+
+Action inputs are mapped to the same configuration fields by the Action; they do not create a second configuration format.

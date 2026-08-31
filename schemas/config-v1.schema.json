@@ -1,0 +1,223 @@
+{
+  "$defs": {
+    "AgentConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "max_iterations": {
+          "default": 5,
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Max Iterations",
+          "type": "integer"
+        },
+        "provider": {
+          "default": "codex",
+          "title": "Provider",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "default": 600,
+          "exclusiveMinimum": 0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        }
+      },
+      "title": "AgentConfig",
+      "type": "object"
+    },
+    "ArchitectureConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "forbidden_dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Dependencies",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "forbidden_imports": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Forbidden Imports",
+          "type": "array"
+        },
+        "max_file_lines": {
+          "default": 500,
+          "minimum": 1,
+          "title": "Max File Lines",
+          "type": "integer"
+        },
+        "max_function_lines": {
+          "default": 80,
+          "minimum": 1,
+          "title": "Max Function Lines",
+          "type": "integer"
+        }
+      },
+      "title": "ArchitectureConfig",
+      "type": "object"
+    },
+    "ComplexityConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "max_complexity_increase": {
+          "default": 10,
+          "minimum": 0,
+          "title": "Max Complexity Increase",
+          "type": "number"
+        },
+        "max_function_complexity": {
+          "default": 15,
+          "minimum": 1,
+          "title": "Max Function Complexity",
+          "type": "integer"
+        }
+      },
+      "title": "ComplexityConfig",
+      "type": "object"
+    },
+    "DependenciesConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "forbidden": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "max_new_dependencies": {
+          "default": 3,
+          "minimum": 0,
+          "title": "Max New Dependencies",
+          "type": "integer"
+        }
+      },
+      "title": "DependenciesConfig",
+      "type": "object"
+    },
+    "DuplicationConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "max_new_blocks": {
+          "default": 2,
+          "minimum": 0,
+          "title": "Max New Blocks",
+          "type": "integer"
+        }
+      },
+      "title": "DuplicationConfig",
+      "type": "object"
+    },
+    "QualityConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum_score": {
+          "default": 80,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Minimum Score",
+          "type": "number"
+        }
+      },
+      "title": "QualityConfig",
+      "type": "object"
+    },
+    "SecurityConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "fail_on": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fail On",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "title": "SecurityConfig",
+      "type": "object"
+    },
+    "TestsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command"
+        },
+        "max_coverage_drop": {
+          "default": 1.0,
+          "minimum": 0,
+          "title": "Max Coverage Drop",
+          "type": "number"
+        },
+        "require_pass": {
+          "default": true,
+          "title": "Require Pass",
+          "type": "boolean"
+        }
+      },
+      "title": "TestsConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "agent": {
+      "$ref": "#/$defs/AgentConfig"
+    },
+    "architecture": {
+      "$ref": "#/$defs/ArchitectureConfig"
+    },
+    "complexity": {
+      "$ref": "#/$defs/ComplexityConfig"
+    },
+    "dependencies": {
+      "$ref": "#/$defs/DependenciesConfig"
+    },
+    "duplication": {
+      "$ref": "#/$defs/DuplicationConfig"
+    },
+    "exclude": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Exclude",
+      "type": "array"
+    },
+    "quality": {
+      "$ref": "#/$defs/QualityConfig"
+    },
+    "security": {
+      "$ref": "#/$defs/SecurityConfig"
+    },
+    "tests": {
+      "$ref": "#/$defs/TestsConfig"
+    },
+    "version": {
+      "const": 1,
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    }
+  },
+  "title": "AgentGuardConfig",
+  "type": "object"
+}

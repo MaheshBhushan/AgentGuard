@@ -67,5 +67,18 @@ class AnalyzerRegistry:
                     )
                 )
             else:
-                tasks.append(asyncio.create_task(analyzer.analyze(context)))
+                tasks.append(asyncio.create_task(self._run_analyzer(analyzer, context)))
         return results + list(await asyncio.gather(*tasks))
+
+    @staticmethod
+    async def _run_analyzer(analyzer: Analyzer, context: AnalysisContext) -> AnalyzerResult:
+        try:
+            return await analyzer.analyze(context)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - isolate third-party analyzer failures
+            return AnalyzerResult(
+                analyzer=analyzer.metadata.name,
+                status=AnalyzerStatus.FAILED,
+                message=f"analyzer crashed: {type(exc).__name__}: {exc}",
+            )

@@ -44,7 +44,7 @@ def test_parse_diff_tracks_lines_and_languages() -> None:
     change = parse_diff(diff)
     assert change.additions == 2
     assert change.deletions == 1
-    assert change.files[0].changed_lines == {1, 2, 3}
+    assert change.files[0].changed_lines == {2, 3}
     assert changed_languages(change) == {"python"}
 
 
@@ -52,6 +52,25 @@ def test_runner_timeout(tmp_path: Path) -> None:
     result = asyncio.run(run_process([sys.executable, "-c", "import time; time.sleep(1)"], cwd=tmp_path, timeout=0.01))
     assert result.timed_out
     assert result.returncode == -1
+
+
+def test_runner_cancellation_propagates(tmp_path: Path) -> None:
+    async def cancel_process() -> None:
+        task = asyncio.create_task(
+            run_process(
+                [sys.executable, "-c", "import time; time.sleep(10)"],
+                cwd=tmp_path,
+            )
+        )
+        await asyncio.sleep(0.05)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            return
+        raise AssertionError("process task did not propagate cancellation")
+
+    asyncio.run(cancel_process())
 
 
 def test_model_validation() -> None:
@@ -69,4 +88,3 @@ def test_score_and_policies() -> None:
     assert sum(item.penalty for item in components) == 28
     policies = evaluate_policies(load_config(), score, {"tests_failed": 1}, [result])
     assert {policy.name for policy in policies if not policy.passed} == {"minimum_score", "tests_pass", "security"}
-
