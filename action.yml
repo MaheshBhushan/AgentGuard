@@ -1,0 +1,20 @@
+name: AgentGuard quality gate
+description: Run deterministic quality checks against a Git base revision
+inputs:
+  base-ref:
+    description: Git revision to compare against
+    required: false
+    default: HEAD~1
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install AgentGuard from action source
+      shell: bash
+      run: python -m pip install "${{ github.action_path }}"
+    - name: Run AgentGuard
+      shell: bash
+      run: agentguard compare "${{ inputs.base-ref }}" --format json
