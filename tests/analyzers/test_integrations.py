@@ -4,6 +4,8 @@ import asyncio
 import json
 from pathlib import Path
 
+import pytest
+
 from agentguard.analyzers._shared import completed, invoke
 from agentguard.analyzers.base import AnalysisContext, AnalyzerMetadata, AnalyzerRegistry
 from agentguard.analyzers.python.tools import RuffAnalyzer
@@ -11,6 +13,8 @@ from agentguard.analyzers.typescript import detect_test_runner, package_manager
 from agentguard.core.config import AgentGuardConfig
 from agentguard.core.models import AnalyzerStatus, ChangedFile, ChangeSummary
 from agentguard.core.runner import ProcessResult
+
+FIXTURES = Path(__file__).parents[1] / "fixtures" / "package-managers"
 
 
 def context(root: Path) -> AnalysisContext:
@@ -93,6 +97,19 @@ def test_package_manager_detects_lockfile(tmp_path: Path) -> None:
     (tmp_path / "package.json").write_text("{}", encoding="utf-8")
     (tmp_path / "bun.lock").touch()
     assert package_manager(tmp_path) == "bun"
+
+
+@pytest.mark.parametrize(
+    "manager",
+    [
+        "npm",
+        "pnpm",
+        "yarn",
+        "bun",
+    ],
+)
+def test_package_manager_release_matrix(manager: str) -> None:
+    assert package_manager(FIXTURES / manager) == manager
 
 
 def test_javascript_test_runner_detection() -> None:

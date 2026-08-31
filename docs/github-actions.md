@@ -38,4 +38,12 @@ default.
 
 Until a versioned action is published, use `uses: ./` after checkout when testing from this repository.
 
+## Release-candidate validation
+
+The manual `consumer-smoke.yml` workflow exercises the current checkout as a composite Action on
+Ubuntu without publishing it. Before promoting a release, create an immutable candidate tag and run
+the same three-input smoke job from a separate disposable repository using
+`uses: MaheshBhushan/AgentGuard@<candidate-tag>`. Verify pass, fail, incomplete, shallow-history,
+read-only fork, JSON artifact, and optional SARIF paths against that exact tag before moving `v1`.
+
 PR comments are optional. Grant `pull-requests: write` only when `post-comment` is enabled, and remember that write tokens are restricted for pull requests from forks. Step summaries and artifact uploads need no pull-request write permission.
