@@ -22,10 +22,12 @@ jobs:
 
 The default `auto` profile detects Python and TypeScript projects, installs its pinned analyzers, and compares a pull request with the base SHA from the GitHub event. Full history is required to compute a trustworthy merge base; AgentGuard exits with checkout guidance when the history is insufficient rather than analyzing the wrong diff.
 
-The Action exposes `verdict`, `quality-score`, `findings-count`, `policy-failures`, `analyzers-executed`, `analyzers-unavailable`, and `report-path`. Array outputs are compact JSON. By default, `fail`, `incomplete`, and `error` outcomes fail the step; customize this with `fail-on` only when intentionally observing results without gating.
+Every run appends a concise report to the GitHub step summary. The Action also exposes `verdict`, `quality-score`, `findings-count`, `policy-failures`, `analyzers-executed`, `analyzers-unavailable`, and `report-path`. Array outputs are compact JSON. By default, `fail`, `incomplete`, and `error` outcomes fail the step; customize this with `fail-on` only when intentionally observing results without gating.
 
 Inputs override repository configuration, which overrides AgentGuard defaults. `minimum-score` and `timeout` are validated through the same strict configuration model. Analyzer commands use pinned profiles and argument arrays; input values are never interpolated into shell commands.
 
-Until a versioned action is published, use `uses: ./` after checkout when testing from this repository. PR comments, annotations, and report artifact upload are reserved inputs for the next GitHub-reporting release and currently default off.
+Set `upload-report: true` to retain the complete JSON report for seven days. Set `post-comment: true` and grant `pull-requests: write` to create one marker-owned bot comment that is updated on later runs. The default remains read-only. Fork pull requests and runs without write permission retain the step summary and analysis outputs without failing because a comment could not be posted.
 
-PR comments are optional. Grant `pull-requests: write` only to a separate step that posts the generated Markdown report, and remember that secrets/write tokens are restricted for pull requests from forks. Printing the report or uploading it as an artifact needs no pull-request write permission.
+Until a versioned action is published, use `uses: ./` after checkout when testing from this repository. Annotations remain reserved for the SARIF release and currently default off.
+
+PR comments are optional. Grant `pull-requests: write` only when `post-comment` is enabled, and remember that write tokens are restricted for pull requests from forks. Step summaries and artifact uploads need no pull-request write permission.

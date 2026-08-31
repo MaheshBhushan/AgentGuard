@@ -5,6 +5,11 @@ def test_github_report_contains_gates_and_actionable_findings() -> None:
     report = {
         "quality_score": 81,
         "verdict": "changes requested",
+        "analyzer_results": [
+            {"status": "completed"},
+            {"status": "unavailable"},
+            {"status": "skipped"},
+        ],
         "policies": [{"name": "Tests", "passed": False, "message": "1 failed"}],
         "findings": [
             {
@@ -18,6 +23,7 @@ def test_github_report_contains_gates_and_actionable_findings() -> None:
     }
     markdown = render_github_markdown(report)
     assert "**Quality score:** 81 / 100" in markdown
+    assert "**Analysis completeness:** 50%" in markdown
     assert "| Tests | ❌ Fail | 1 failed |" in markdown
     assert "`src/a.py:9`" in markdown
     assert "increased \\| limit" in markdown

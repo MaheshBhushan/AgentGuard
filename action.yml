@@ -34,7 +34,7 @@ inputs:
     required: false
     default: "true"
   post-comment:
-    description: Reserved for optional PR reporting
+    description: Create or update one AgentGuard pull-request comment
     required: false
     default: "false"
   annotations:
@@ -42,7 +42,7 @@ inputs:
     required: false
     default: "false"
   upload-report:
-    description: Reserved for optional report artifact upload
+    description: Upload the JSON report as a workflow artifact
     required: false
     default: "false"
   token:
@@ -94,4 +94,14 @@ runs:
         AGENTGUARD_INPUT_FAIL_ON: ${{ inputs.fail-on }}
         AGENTGUARD_INPUT_TIMEOUT: ${{ inputs.timeout }}
         AGENTGUARD_INPUT_INSTALL_ANALYZERS: ${{ inputs.install-analyzers }}
+        AGENTGUARD_INPUT_POST_COMMENT: ${{ inputs.post-comment }}
+        AGENTGUARD_INPUT_TOKEN: ${{ inputs.token }}
       run: python -m agentguard.integrations.github_action
+    - name: Upload AgentGuard report
+      if: ${{ always() && inputs.upload-report == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: agentguard-report
+        path: ${{ steps.agentguard.outputs.report-path }}
+        if-no-files-found: error
+        retention-days: 7

@@ -52,6 +52,11 @@ def test_action_metadata_exposes_marketplace_contract() -> None:
         "analyzers-unavailable",
         "report-path",
     } == metadata["outputs"].keys()
+    upload = next(
+        step for step in metadata["runs"]["steps"] if step.get("name") == "Upload AgentGuard report"
+    )
+    assert upload["uses"] == "actions/upload-artifact@v4"
+    assert "inputs.upload-report == 'true'" in upload["if"]
 
 
 def test_auto_base_uses_pull_request_sha(tmp_path: Path) -> None:
@@ -84,6 +89,7 @@ def test_entrypoint_writes_outputs_and_report(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     output = tmp_path / "github-output"
+    summary = tmp_path / "step-summary"
     report = QualityReport(
         repository=tmp_path,
         change=ChangeSummary(files=[ChangedFile(path=Path("app.py"), status="modified")]),
@@ -105,6 +111,7 @@ def test_entrypoint_writes_outputs_and_report(
             {
                 "GITHUB_WORKSPACE": str(tmp_path),
                 "GITHUB_OUTPUT": str(output),
+                "GITHUB_STEP_SUMMARY": str(summary),
                 "AGENTGUARD_INPUT_PROFILE": "minimal",
             }
         )
@@ -116,3 +123,72 @@ def test_entrypoint_writes_outputs_and_report(
     assert json.loads(values["analyzers-executed"]) == ["ruff"]
     assert json.loads(values["analyzers-unavailable"]) == ["mypy"]
     assert Path(values["report-path"]).is_file()
+    markdown = summary.read_text(encoding="utf-8")
+    assert "**Analysis completeness:** 50%" in markdown
+    assert "**Verdict:** incomplete" in markdown
+
+
+def test_comment_updates_existing_bot_comment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    event = tmp_path / "event.json"
+    event.write_text(
+        json.dumps({"number": 7, "pull_request": {"number": 7, "head": {"repo": {"fork": False}}}}),
+        encoding="utf-8",
+    )
+    calls: list[tuple[str, str, dict[str, str] | None]] = []
+
+    def request(
+        url: str, token: str, method: str = "GET", payload: dict[str, str] | None = None
+    ) -> object:
+        del token
+        calls.append((url, method, payload))
+        if method == "GET":
+            return [
+                {
+                    "url": "https://api.github.com/comments/9",
+                    "body": action.COMMENT_MARKER,
+                    "user": {"type": "Bot"},
+                }
+            ]
+        return {"id": 9}
+
+    monkeypatch.setattr(action, "_github_request", request)
+    assert action.post_comment(
+        "report",
+        {
+            "GITHUB_EVENT_PATH": str(event),
+            "GITHUB_REPOSITORY": "owner/repo",
+            "AGENTGUARD_INPUT_TOKEN": "secret",
+        },
+    )
+    assert [method for _, method, _ in calls] == ["GET", "PATCH"]
+    assert calls[1][0] == "https://api.github.com/comments/9"
+    assert calls[1][2] == {"body": f"{action.COMMENT_MARKER}\nreport"}
+
+
+def test_comment_permission_failure_and_fork_degrade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    event = tmp_path / "event.json"
+    environment = {
+        "GITHUB_EVENT_PATH": str(event),
+        "GITHUB_REPOSITORY": "owner/repo",
+        "AGENTGUARD_INPUT_TOKEN": "read-only",
+    }
+    event.write_text(
+        json.dumps({"pull_request": {"number": 2, "head": {"repo": {"fork": False}}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(action, "_github_request", lambda *args, **kwargs: None)
+    assert not action.post_comment("report", environment)
+
+    def unexpected(*args: object, **kwargs: object) -> object:
+        raise AssertionError("fork comment API must not be called")
+
+    event.write_text(
+        json.dumps({"pull_request": {"number": 2, "head": {"repo": {"fork": True}}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(action, "_github_request", unexpected)
+    assert not action.post_comment("report", environment)
