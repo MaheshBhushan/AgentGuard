@@ -39,6 +39,7 @@ jobs:
           if-no-files-found: error
 
   publish:
+    if: vars.PUBLISH_PYPI == 'true'
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -59,7 +60,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
 
   github-release:
-    needs: publish
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write

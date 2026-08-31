@@ -19,6 +19,7 @@ def test_release_workflow_uses_trusted_publishing_and_minimal_permissions() -> N
     )
     assert workflow["permissions"] == {"contents": "read"}
     publish = workflow["jobs"]["publish"]
+    assert publish["if"] == "vars.PUBLISH_PYPI == 'true'"
     assert publish["environment"]["name"] == "pypi"
     assert publish["permissions"] == {
         "contents": "read",
@@ -29,6 +30,7 @@ def test_release_workflow_uses_trusted_publishing_and_minimal_permissions() -> N
         str(step.get("uses", "")).startswith("pypa/gh-action-pypi-publish@")
         for step in publish["steps"]
     )
+    assert workflow["jobs"]["github-release"]["needs"] == "build"
     test_publish = yaml.safe_load(
         (ROOT / ".github" / "workflows" / "test-publish.yml").read_text(encoding="utf-8")
     )["jobs"]["test-publish"]
