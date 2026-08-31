@@ -18,6 +18,7 @@ from agentguard.core.feedback import actionable_findings
 from agentguard.core.models import AnalyzerStatus, Outcome, QualityReport
 from agentguard.reporters.github import render_github_markdown
 from agentguard.reporters.json_reporter import render_json, report_data
+from agentguard.reporters.sarif import render_sarif
 
 COMMENT_MARKER = "<!-- agentguard-report -->"
 
@@ -199,6 +200,8 @@ async def run(env: Mapping[str, str] = os.environ) -> int:
     report_path = root / ".agentguard" / "report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(render_json(report) + "\n", encoding="utf-8")
+    sarif_path = report_path.with_name("report.sarif")
+    sarif_path.write_text(render_sarif(report) + "\n", encoding="utf-8")
     markdown = _markdown(report)
     summary_path = env.get("GITHUB_STEP_SUMMARY")
     if summary_path:

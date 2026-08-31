@@ -38,7 +38,7 @@ inputs:
     required: false
     default: "false"
   annotations:
-    description: Reserved for optional workflow annotations
+    description: Upload file-specific findings to GitHub code scanning through SARIF
     required: false
     default: "false"
   upload-report:
@@ -97,6 +97,12 @@ runs:
         AGENTGUARD_INPUT_POST_COMMENT: ${{ inputs.post-comment }}
         AGENTGUARD_INPUT_TOKEN: ${{ inputs.token }}
       run: python -m agentguard.integrations.github_action
+    - name: Upload AgentGuard SARIF
+      if: ${{ always() && inputs.annotations == 'true' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ github.workspace }}/.agentguard/report.sarif
+        category: agentguard
     - name: Upload AgentGuard report
       if: ${{ always() && inputs.upload-report == 'true' }}
       uses: actions/upload-artifact@v4

@@ -57,6 +57,12 @@ def test_action_metadata_exposes_marketplace_contract() -> None:
     )
     assert upload["uses"] == "actions/upload-artifact@v4"
     assert "inputs.upload-report == 'true'" in upload["if"]
+    sarif = next(
+        step for step in metadata["runs"]["steps"] if step.get("name") == "Upload AgentGuard SARIF"
+    )
+    assert sarif["uses"] == "github/codeql-action/upload-sarif@v3"
+    assert "inputs.annotations == 'true'" in sarif["if"]
+    assert sarif["with"]["sarif_file"].endswith("/.agentguard/report.sarif")
 
 
 def test_auto_base_uses_pull_request_sha(tmp_path: Path) -> None:
@@ -123,6 +129,9 @@ def test_entrypoint_writes_outputs_and_report(
     assert json.loads(values["analyzers-executed"]) == ["ruff"]
     assert json.loads(values["analyzers-unavailable"]) == ["mypy"]
     assert Path(values["report-path"]).is_file()
+    sarif = tmp_path / ".agentguard" / "report.sarif"
+    assert sarif.is_file()
+    assert json.loads(sarif.read_text(encoding="utf-8"))["version"] == "2.1.0"
     markdown = summary.read_text(encoding="utf-8")
     assert "**Analysis completeness:** 50%" in markdown
     assert "**Verdict:** incomplete" in markdown
