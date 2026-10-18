@@ -26,7 +26,8 @@ Package-manager detection reads `package.json` and recognized lock files for npm
 GitHub integrations can resolve deterministic analyzer bundles through
 `agentguard.analyzers.profiles`:
 
-- `auto` selects Python and JS/TS tools from repository manifests or source files.
+- `auto` selects Python and JS/TS tools from repository manifests or source files and adds Semgrep
+  when either language family is detected. Python tools include Bandit.
 - `minimal` runs only built-in dependency and architecture checks.
 - `python`, `typescript`, and `security` select their named tool families.
 - `full` selects every registered family, including duplication checks.
@@ -38,3 +39,21 @@ outcome `INCOMPLETE` rather than clean. Trivy remains an explicitly required ext
 security and full profiles because its installation is platform-specific.
 
 To add an analyzer, implement the analyzer protocol, declare metadata and executable requirements, register it through the plugin mechanism, normalize all outcomes, and test success, malformed output, non-zero exit, absence, and timeout. Preserve the tool's rule identifier and severity rather than collapsing every result into a warning.
+
+## Security findings and SARIF
+
+Bandit scans changed Python files and retains rule IDs, severity, confidence, and source locations.
+Deleted Python files are excluded. Semgrep scans the repository with `--config auto --metrics=off`.
+The auto configuration fetches rules from the Semgrep Registry and requires network access.
+Semgrep `ERROR`, `WARNING`, and `INFO` findings map to high, medium, and info severity.
+Both analyzers accept findings exit code 1, report missing tools as unavailable, and report
+timeouts, invalid JSON, scan errors, and other exit codes as failed analysis.
+
+Run `agentguard check --format sarif > report.sarif` to export normalized findings as SARIF 2.1.0.
+`agentguard compare main --format sarif` supports the same export. The command retains its usual
+policy exit code even when it emits a report. Rule IDs include the analyzer name to avoid collisions.
+Security rules carry GitHub's `security` tag and a severity score mapped from AgentGuard's severity:
+critical 9.0, high 8.0, medium 5.0, low 2.0, and info 0.0. These scores represent severity categories.
+They are not measured CVSS scores. Paths are repository-relative, URI-encoded locations.
+SARIF marks execution as unsuccessful when analysis failed or a required analyzer was unavailable.
+See [GitHub Actions](github-actions.md) for upload permissions and PR annotations.

@@ -98,7 +98,7 @@ runs:
         AGENTGUARD_INPUT_TOKEN: ${{ inputs.token }}
       run: python -m agentguard.integrations.github_action
     - name: Upload AgentGuard SARIF
-      if: ${{ always() && inputs.annotations == 'true' }}
+      if: ${{ always() && inputs.annotations == 'true' && hashFiles('.agentguard/report.sarif') != '' && github.event.pull_request.head.repo.fork != true }}
       uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
       with:
         sarif_file: ${{ github.workspace }}/.agentguard/report.sarif

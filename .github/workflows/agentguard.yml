@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   quality:
@@ -16,5 +17,6 @@ jobs:
       - uses: ./
         with:
           base-ref: ${{ github.event.pull_request.base.sha }}
-          profile: minimal
+          profile: auto
+          annotations: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
           fail-on: error,incomplete

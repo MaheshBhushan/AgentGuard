@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import quote
 
-from agentguard.core.models import Finding, QualityReport, Severity
+from agentguard.core.models import Finding, Outcome, QualityReport, Severity
 
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 
@@ -22,7 +23,7 @@ def _repository_path(repository: Path, path: Path | None) -> str | None:
         return None
     if not normalized.parts or normalized.parts[0].endswith(":"):
         return None
-    return normalized.as_posix()
+    return quote(normalized.as_posix(), safe="/")
 
 
 def _rule_id(finding: Finding) -> str:
@@ -61,6 +62,19 @@ def sarif_data(report: QualityReport) -> dict[str, Any]:
                 },
             },
         )
+        if finding.category == "security":
+            properties = rules[rule_id]["properties"]
+            properties["tags"] = ["security"]
+            score = {
+                Severity.CRITICAL: 9.0,
+                Severity.HIGH: 8.0,
+                Severity.MEDIUM: 5.0,
+                Severity.LOW: 2.0,
+                Severity.INFO: 0.0,
+            }[finding.severity]
+            properties["security-severity"] = str(
+                max(score, float(properties.get("security-severity", "0")))
+            )
         message = finding.message
         if finding.remediation:
             message = f"{message}\n\nRemediation: {finding.remediation}"
@@ -102,6 +116,12 @@ def sarif_data(report: QualityReport) -> dict[str, Any]:
                 "originalUriBaseIds": {
                     "%SRCROOT%": {"uri": report.repository.resolve().as_uri() + "/"}
                 },
+                "invocations": [
+                    {
+                        "executionSuccessful": report.outcome
+                        not in {Outcome.ERROR, Outcome.INCOMPLETE}
+                    }
+                ],
                 "results": results,
             }
         ],

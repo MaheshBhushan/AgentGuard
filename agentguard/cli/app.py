@@ -15,6 +15,7 @@ from agentguard.core.config import AgentGuardConfig
 from agentguard.core.feedback import generate_feedback
 from agentguard.core.models import QualityReport
 from agentguard.reporters.json_reporter import render_json
+from agentguard.reporters.sarif import render_sarif
 from agentguard.reporters.terminal import render_terminal
 
 app = typer.Typer(no_args_is_help=True, help="Deterministic quality gates for AI-generated code.")
@@ -26,8 +27,14 @@ def _report(base: str | None, staged: bool) -> QualityReport:
 
 
 def _emit(report: QualityReport, output: str) -> None:
+    output = output.lower()
+    if output not in {"terminal", "json", "sarif"}:
+        raise typer.BadParameter("format must be terminal, json, or sarif")
     if output == "json":
         typer.echo(render_json(report))
+        return
+    if output == "sarif":
+        typer.echo(render_sarif(report))
         return
     typer.echo(render_terminal(report, color=console.is_terminal), nl=False)
 
@@ -51,8 +58,8 @@ def check(
     output: str = typer.Option("terminal", "--format", case_sensitive=False),
 ) -> None:
     """Analyze working-tree, staged, or revision changes."""
-    if output not in {"terminal", "json"}:
-        raise typer.BadParameter("format must be terminal or json")
+    if output.lower() not in {"terminal", "json", "sarif"}:
+        raise typer.BadParameter("format must be terminal, json, or sarif")
     report = _report(diff, staged)
     _emit(report, output)
     if report.exit_code:

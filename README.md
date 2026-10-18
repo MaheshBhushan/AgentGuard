@@ -116,12 +116,14 @@ agentguard version               Show the installed version
 ```
 
 Use `--format terminal` for the prioritized Rich report or `--format json` for the [versioned machine contract](docs/json-output.md).
+Export SARIF 2.1.0 with `agentguard check --format sarif > report.sarif` or
+`agentguard compare main --format sarif > report.sarif`. Export preserves the policy exit code.
 
 ## Analyzer profiles
 
 | Profile | Deterministic scope |
 |---|---|
-| `auto` | Detect Python and JS/TS projects and select their relevant tools |
+| `auto` | Detect Python and JS/TS projects and select their relevant tools, including Semgrep |
 | `minimal` | Built-in dependency delta and architecture rules; no external installation |
 | `python` | Ruff, mypy, Radon, pytest/coverage, Bandit, plus built-ins |
 | `typescript` | ESLint, OXC, `tsc`, Vitest/Jest detection, dependency-cruiser, plus built-ins |

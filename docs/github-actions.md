@@ -19,6 +19,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: MaheshBhushan/AgentGuard@v1
+        with:
+          annotations: "true"
 ```
 
 The default `auto` profile detects Python and TypeScript projects, installs its pinned analyzers, and compares a pull request with the base SHA from the GitHub event. Full history is required to compute a trustworthy merge base; AgentGuard exits with checkout guidance when the history is insufficient rather than analyzing the wrong diff.
@@ -34,7 +36,14 @@ scanning. This requires `security-events: write`; keep the permission absent whe
 disabled. Locationless findings and findings with paths outside the repository remain visible in
 JSON and the step summary but are intentionally omitted from SARIF. Fork pull requests may not be
 allowed to upload SARIF with the event's restricted token, so annotations remain disabled by
-default.
+default. The upload step runs after a failed quality gate when a SARIF report exists and skips fork
+PRs. The repository's own PR workflow enables the `auto` profile and uploads annotations for PRs
+from the same repository. This runs Bandit on Python changes and Semgrep on the repository.
+
+GitHub shows uploaded results in code scanning and can annotate PR lines that overlap findings.
+The repository must support GitHub code scanning. A local test cannot verify GitHub's alert display.
+See [GitHub's SARIF upload guide](https://docs.github.com/en/code-security/how-tos/find-and-fix-code-vulnerabilities/integrate-with-existing-tools/upload-sarif-file)
+for platform requirements.
 
 Until a versioned action is published, use `uses: ./` after checkout when testing from this repository.
 
