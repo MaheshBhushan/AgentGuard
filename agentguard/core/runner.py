@@ -19,13 +19,18 @@ class ProcessResult:
 
 
 async def run_process(
-    command: Sequence[str], *, cwd: Path, timeout: float = 120, env: Mapping[str, str] | None = None
+    command: Sequence[str],
+    *,
+    cwd: Path,
+    timeout: float = 120,
+    env: Mapping[str, str] | None = None,
+    inherit_env: bool = True,
 ) -> ProcessResult:
     started = time.monotonic()
     process = await asyncio.create_subprocess_exec(
         *command,
         cwd=cwd,
-        env={**os.environ, **(env or {})},
+        env={**(os.environ if inherit_env else {}), **(env or {})},
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
