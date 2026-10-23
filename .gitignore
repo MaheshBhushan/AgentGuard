@@ -12,3 +12,8 @@ coverage.xml
 dist/
 htmlcov/
 node_modules/
+
+# Local credentials
+.env
+.env.*
+!.env.example
