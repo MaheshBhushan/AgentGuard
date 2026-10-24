@@ -72,6 +72,19 @@ def json_data(text: str) -> Any:
     return json.loads(text or "null")
 
 
+def security_data(text: str) -> dict[str, Any]:
+    data = json.loads(text)
+    if not isinstance(data, dict) or not isinstance(data.get("results"), list):
+        raise TypeError("expected an object with a results array")
+    if not all(isinstance(item, dict) for item in data["results"]):
+        raise ValueError("expected finding objects in results")
+    if not isinstance(data.get("errors", []), list):
+        raise TypeError("expected an errors array")
+    if data.get("errors"):
+        raise ValueError(f"scan reported errors: {json.dumps(data['errors'])}")
+    return data
+
+
 def severity(value: str | int | None) -> Severity:
     if isinstance(value, int):
         return Severity.HIGH if value >= 2 else Severity.MEDIUM if value == 1 else Severity.LOW

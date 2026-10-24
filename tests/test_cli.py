@@ -1,5 +1,7 @@
+import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 import agentguard.cli.app as cli
@@ -9,8 +11,10 @@ from agentguard.core.models import (
     AnalyzerStatus,
     ChangedFile,
     ChangeSummary,
+    Finding,
     PolicyResult,
     QualityReport,
+    Severity,
 )
 
 runner = CliRunner()
@@ -68,9 +72,7 @@ def test_check_exit_code_distinguishes_analyzer_error(monkeypatch, tmp_path) -> 
     errored = QualityReport(
         repository=tmp_path,
         change=ChangeSummary(files=[ChangedFile(path=Path("app.py"), status="modified")]),
-        analyzer_results=[
-            AnalyzerResult(analyzer="broken-tool", status=AnalyzerStatus.FAILED)
-        ],
+        analyzer_results=[AnalyzerResult(analyzer="broken-tool", status=AnalyzerStatus.FAILED)],
     )
     monkeypatch.setattr(cli, "_report", lambda base, staged: errored)
     result = runner.invoke(app, ["check", "--format", "json"])
@@ -84,3 +86,34 @@ def test_check_explicitly_skips_empty_change(monkeypatch, tmp_path) -> None:
     result = runner.invoke(app, ["check", "--format", "json"])
     assert result.exit_code == 0
     assert '"verdict": "skipped"' in result.stdout
+
+
+@pytest.mark.parametrize("command", [["check"], ["compare", "main"]])
+def test_sarif_export_preserves_security_gate_exit_code(monkeypatch, tmp_path, command):
+    report = QualityReport(
+        repository=tmp_path,
+        change=ChangeSummary(files=[ChangedFile(path=Path("app.py"), status="M")]),
+        analyzer_results=[
+            AnalyzerResult(
+                analyzer="bandit",
+                findings=[
+                    Finding(
+                        analyzer="bandit",
+                        category="security",
+                        severity=Severity.HIGH,
+                        message="Unsafe call",
+                        file=Path("app.py"),
+                        line=2,
+                        rule_id="B301",
+                    )
+                ],
+            )
+        ],
+        policies=[PolicyResult(name="security", passed=False, message="Unsafe call")],
+    )
+    monkeypatch.setattr(cli, "_report", lambda base, staged: report)
+    result = runner.invoke(app, [*command, "--format", "sarif"])
+    assert result.exit_code == 1
+    data = json.loads(result.stdout)
+    assert data["version"] == "2.1.0"
+    assert data["runs"][0]["results"][0]["ruleId"] == "bandit/B301"

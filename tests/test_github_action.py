@@ -14,8 +14,10 @@ from agentguard.core.models import (
     AnalyzerStatus,
     ChangedFile,
     ChangeSummary,
+    Finding,
     PolicyResult,
     QualityReport,
+    Severity,
 )
 
 ROOT = Path(__file__).parents[1]
@@ -60,9 +62,23 @@ def test_action_metadata_exposes_marketplace_contract() -> None:
     sarif = next(
         step for step in metadata["runs"]["steps"] if step.get("name") == "Upload AgentGuard SARIF"
     )
-    assert sarif["uses"] == "github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938"
+    assert (
+        sarif["uses"]
+        == "github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938"
+    )
     assert "inputs.annotations == 'true'" in sarif["if"]
+    assert "always()" in sarif["if"]
+    assert "hashFiles('.agentguard/report.sarif') != ''" in sarif["if"]
+    assert "github.event.pull_request.head.repo.fork != true" in sarif["if"]
     assert sarif["with"]["sarif_file"].endswith("/.agentguard/report.sarif")
+
+
+def test_repository_workflow_enables_security_annotations() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/agentguard.yml").read_text())
+    assert workflow["permissions"]["security-events"] == "write"
+    step = next(step for step in workflow["jobs"]["quality"]["steps"] if step.get("uses") == "./")
+    assert step["with"]["profile"] == "auto"
+    assert "head.repo.full_name == github.repository" in step["with"]["annotations"]
 
 
 def test_auto_base_uses_pull_request_sha(tmp_path: Path) -> None:
@@ -100,7 +116,20 @@ def test_entrypoint_writes_outputs_and_report(
         repository=tmp_path,
         change=ChangeSummary(files=[ChangedFile(path=Path("app.py"), status="modified")]),
         analyzer_results=[
-            AnalyzerResult(analyzer="ruff"),
+            AnalyzerResult(
+                analyzer="bandit",
+                findings=[
+                    Finding(
+                        analyzer="bandit",
+                        category="security",
+                        severity=Severity.HIGH,
+                        message="Unsafe deserialization",
+                        file=Path("app.py"),
+                        line=3,
+                        rule_id="B301",
+                    )
+                ],
+            ),
             AnalyzerResult(analyzer="mypy", status=AnalyzerStatus.UNAVAILABLE, required=True),
         ],
         policies=[PolicyResult(name="score", passed=True, message="passed")],
@@ -126,12 +155,15 @@ def test_entrypoint_writes_outputs_and_report(
     values = dict(line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())
     assert values["verdict"] == "incomplete"
     assert values["quality-score"] == "91"
-    assert json.loads(values["analyzers-executed"]) == ["ruff"]
+    assert json.loads(values["analyzers-executed"]) == ["bandit"]
     assert json.loads(values["analyzers-unavailable"]) == ["mypy"]
     assert Path(values["report-path"]).is_file()
     sarif = tmp_path / ".agentguard" / "report.sarif"
     assert sarif.is_file()
-    assert json.loads(sarif.read_text(encoding="utf-8"))["version"] == "2.1.0"
+    sarif_data = json.loads(sarif.read_text(encoding="utf-8"))
+    assert sarif_data["version"] == "2.1.0"
+    assert sarif_data["runs"][0]["results"][0]["ruleId"] == "bandit/B301"
+    assert sarif_data["runs"][0]["invocations"] == [{"executionSuccessful": False}]
     markdown = summary.read_text(encoding="utf-8")
     assert "**Analysis completeness:** 50%" in markdown
     assert "**Verdict:** incomplete" in markdown

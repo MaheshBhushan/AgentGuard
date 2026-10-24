@@ -18,6 +18,7 @@ def test_auto_profile_detects_only_python_tools(tmp_path: Path) -> None:
     profile = resolve_profile(tmp_path, "auto")
     assert profile.languages == {"python"}
     assert "ruff" in profile.analyzers
+    assert {"bandit", "semgrep"} <= profile.analyzers
     assert "eslint" not in profile.analyzers
     assert all("==" in tool.command[-1] or "@" in tool.command[-1] for tool in profile.tools)
 
@@ -29,6 +30,7 @@ def test_auto_profile_detects_mixed_source_tree(tmp_path: Path) -> None:
     profile = resolve_profile(tmp_path, AnalyzerProfile.AUTO)
     assert profile.languages == {"python", "typescript"}
     assert {"ruff", "eslint", "dependency-delta", "architecture"} <= profile.analyzers
+    assert "semgrep" in profile.analyzers
 
 
 def test_minimal_profile_has_no_install_commands(tmp_path: Path) -> None:

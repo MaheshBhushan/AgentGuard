@@ -3,7 +3,14 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from agentguard.analyzers._shared import completed, finding, invoke, json_data, targets
+from agentguard.analyzers._shared import (
+    completed,
+    finding,
+    invoke,
+    json_data,
+    security_data,
+    targets,
+)
 from agentguard.analyzers.base import AnalysisContext, AnalyzerMetadata
 from agentguard.core.models import AnalyzerResult, AnalyzerStatus
 
@@ -131,13 +138,18 @@ class BanditAnalyzer:
     metadata = AnalyzerMetadata("bandit", "security", frozenset({"python"}))
 
     async def analyze(self, context: AnalysisContext) -> AnalyzerResult:
+        files = targets(context, PYTHON)
+        if not files:
+            return AnalyzerResult(
+                analyzer="bandit", status=AnalyzerStatus.SKIPPED, message="no Python targets"
+            )
         process = await invoke(
-            "bandit", ["bandit", "-f", "json", "-q", *targets(context, PYTHON)], context
+            "bandit", ["bandit", "-f", "json", "-q", "--", *files], context
         )
         if isinstance(process, AnalyzerResult):
             return process
         try:
-            data = json_data(process.stdout) or {}
+            data = security_data(process.stdout)
             findings = [
                 finding(
                     "bandit",
@@ -145,6 +157,7 @@ class BanditAnalyzer:
                     item["issue_text"],
                     file=item.get("filename"),
                     line=item.get("line_number"),
+                    column=item["col_offset"] + 1 if item.get("col_offset") is not None else None,
                     rule=item.get("test_id"),
                     level=item.get("issue_severity"),
                     metadata={"confidence": item.get("issue_confidence")},
@@ -156,6 +169,6 @@ class BanditAnalyzer:
                 analyzer="bandit",
                 status=AnalyzerStatus.FAILED,
                 duration_seconds=process.duration_seconds,
-                message=f"invalid JSON output: {exc}",
+                message=f"invalid security output: {exc}",
             )
         return completed("bandit", process, findings)

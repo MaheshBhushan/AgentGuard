@@ -169,6 +169,8 @@ def resolve_profile(root: Path, profile: AnalyzerProfile | str) -> ResolvedProfi
             analyzers |= PYTHON_ANALYZERS
         if "typescript" in languages:
             analyzers |= TYPESCRIPT_ANALYZERS
+        if languages:
+            analyzers |= frozenset({"semgrep"})
     tools = tuple(tool for tool in TOOL_PINS if tool.analyzer in analyzers)
     return ResolvedProfile(requested, languages, analyzers, tools)
 

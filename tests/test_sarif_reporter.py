@@ -116,3 +116,32 @@ def test_sarif_omits_invalid_constructed_line(tmp_path: Path) -> None:
         analyzer_results=[AnalyzerResult(analyzer="tool", findings=[invalid])],
     )
     assert sarif_data(report)["runs"][0]["results"] == []
+
+
+def test_sarif_security_severity_and_uri_encoding(tmp_path: Path) -> None:
+    report = QualityReport(
+        repository=tmp_path,
+        change=ChangeSummary(),
+        analyzer_results=[
+            AnalyzerResult(
+                analyzer="bandit",
+                findings=[
+                    Finding(
+                        analyzer="bandit",
+                        category="security",
+                        severity=severity,
+                        message="Unsafe call",
+                        file=tmp_path / "src/my file#1.py",
+                        line=2,
+                        rule_id="B301",
+                    )
+                    for severity in [Severity.LOW, Severity.HIGH, Severity.MEDIUM]
+                ],
+            )
+        ],
+    )
+    run = sarif_data(report)["runs"][0]
+    assert len(run["tool"]["driver"]["rules"]) == 1
+    assert run["tool"]["driver"]["rules"][0]["properties"]["security-severity"] == "8.0"
+    location = run["results"][0]["locations"][0]["physicalLocation"]["artifactLocation"]
+    assert location["uri"] == "src/my%20file%231.py"

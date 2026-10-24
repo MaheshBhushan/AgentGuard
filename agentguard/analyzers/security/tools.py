@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentguard.analyzers._shared import completed, finding, invoke, json_data
+from agentguard.analyzers._shared import completed, finding, invoke, json_data, security_data
 from agentguard.analyzers.base import AnalysisContext, AnalyzerMetadata
 from agentguard.core.models import AnalyzerResult, AnalyzerStatus
 
@@ -17,7 +17,7 @@ class SemgrepAnalyzer:
         if isinstance(process, AnalyzerResult):
             return process
         try:
-            data = json_data(process.stdout) or {}
+            data = security_data(process.stdout)
             findings = [
                 finding(
                     "semgrep",
@@ -27,17 +27,20 @@ class SemgrepAnalyzer:
                     line=item.get("start", {}).get("line"),
                     column=item.get("start", {}).get("col"),
                     rule=item.get("check_id"),
-                    level=item.get("extra", {}).get("severity"),
+                    level={"ERROR": "high", "WARNING": "medium", "INFO": "info"}.get(
+                        str(item.get("extra", {}).get("severity", "")).upper(),
+                        item.get("extra", {}).get("severity"),
+                    ),
                     metadata={"lines": item.get("extra", {}).get("lines")},
                 )
                 for item in data.get("results", [])
             ]
-        except (ValueError, TypeError) as exc:
+        except (ValueError, TypeError, AttributeError) as exc:
             return AnalyzerResult(
                 analyzer="semgrep",
                 status=AnalyzerStatus.FAILED,
                 duration_seconds=process.duration_seconds,
-                message=f"invalid JSON output: {exc}",
+                message=f"invalid security output: {exc}",
             )
         return completed("semgrep", process, findings)
 
